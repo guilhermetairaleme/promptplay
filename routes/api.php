@@ -7,10 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/chats', [ChatHistoryController::class, 'index']);
-Route::post('/chats', [ChatHistoryController::class, 'store']);
 Route::delete('/chat-history/{id}', [ChatHistoryController::class, 'destroy']);
-Route::put('/chats/{id}', [ChatHistoryController::class, 'update']);
 
 Route::patch('/chats/{id}/clear-final', function ($id) {
     $chat = ChatHistory::findOrFail($id);

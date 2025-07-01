@@ -13,9 +13,14 @@ class ChatHistory extends Model
         'extra',
         'prompt',
         'final_prompt',
+        'user_id'
     ];
 
     protected $casts = [
         'fields' => 'array',
     ];
+
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
 }

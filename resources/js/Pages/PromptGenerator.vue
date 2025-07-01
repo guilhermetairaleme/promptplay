@@ -70,11 +70,7 @@ import { ref, nextTick } from "vue";
                     <div
                         v-if="loading"
                         style="color: #000; font-size: 0.9rem; margin-top: 4px"
-                    >
-                        <span class="spinner"
-                            >🎭 Buscando piada engraçada...</span
-                        >
-                    </div>
+                    ></div>
 
                     <div
                         ref="jokeBox"
@@ -93,6 +89,9 @@ import { ref, nextTick } from "vue";
                             <div v-if="toastVisible" class="custom-toast">
                                 {{ toastMessage }}
                             </div>
+                            <button @click="corrigirPrompt">
+                                🔧 Corrigir IA
+                            </button>
                             <button @click="copyPrompt">📋 Copiar</button>
                             <button @click="startEditing">✏️ Editar</button>
                             <button @click="finalizarPrompt">
@@ -230,6 +229,61 @@ import { ref, nextTick } from "vue";
                 </div>
             </div>
         </div>
+
+        <!-- Modal -->
+        <div
+            v-if="showCorrectionModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+        >
+            <div
+                class="bg-white w-full max-w-2xl p-6 rounded shadow-lg relative"
+            >
+                <h2 class="text-xl font-bold mb-4">
+                    🔧 Instrução para corrigir o prompt
+                </h2>
+
+                <!-- Prompt atual (somente leitura) -->
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold text-sm"
+                        >Prompt atual:</label
+                    >
+                    <div
+                        class="bg-gray-100 p-3 border border-gray-300 rounded text-sm whitespace-pre-wrap max-h-60 overflow-auto"
+                    >
+                        {{ prompt }}
+                    </div>
+                </div>
+
+                <!-- Instrução do usuário -->
+                <div class="mb-4">
+                    <label class="block mb-1 font-semibold text-sm"
+                        >Escreva como deseja melhorar:</label
+                    >
+                    <textarea
+                        v-model="correctionInstruction"
+                        rows="4"
+                        class="w-full p-3 border border-gray-300 rounded resize-none"
+                        placeholder="Ex: Torne o vídeo mais engraçado, adicione um robô vilão..."
+                    ></textarea>
+                </div>
+
+                <!-- Ações -->
+                <div class="flex justify-end gap-2">
+                    <button
+                        @click="showCorrectionModal = false"
+                        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        @click="enviarCorrecao"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                        Regerar com instrução
+                    </button>
+                </div>
+            </div>
+        </div>
     </AuthenticatedLayout>
 </template>
 
@@ -240,6 +294,8 @@ export default {
             chatList: [],
             toastVisible: false,
             toastMessage: "",
+            showCorrectionModal: false,
+            promptCorrigido: "",
             editingChatId: null,
             showConfirmModal: false,
             deletePendingId: null,
@@ -401,6 +457,47 @@ export default {
             this.deletePendingTitle = item.title;
             this.showConfirmModal = true;
         },
+        corrigirPrompt() {
+            this.promptCorrigido = this.prompt;
+            this.showCorrectionModal = true;
+        },
+        corrigirPrompt() {
+            this.correctionInstruction = "";
+            this.showCorrectionModal = true;
+        },
+        async enviarCorrecao() {
+            if (!this.correctionInstruction.trim()) {
+                this.showToast("Digite uma instrução para corrigir.");
+                return;
+            }
+
+            this.loading = true;
+            try {
+                const res = await fetch("/corrigir-prompt", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document
+                            .querySelector('meta[name="csrf-token"]')
+                            .getAttribute("content"),
+                    },
+                    body: JSON.stringify({
+                        prompt_base: this.prompt,
+                        instrucao: this.correctionInstruction,
+                    }),
+                });
+
+                const data = await res.json();
+                this.prompt = data.prompt_corrigido;
+                this.showCorrectionModal = false;
+                this.showToast("✅ Prompt corrigido com sucesso!");
+            } catch (error) {
+                console.error("Erro ao corrigir prompt:", error);
+                this.showToast("❌ Erro ao corrigir prompt.");
+            } finally {
+                this.loading = false;
+            }
+        },
         async confirmDelete() {
             try {
                 const res = await fetch(
@@ -433,13 +530,13 @@ export default {
             this.promptFinalizado = "";
             this.editing = false;
             this.jokeGenerated = false;
+            this.editingChatId = null; // <- ESSENCIAL: garante que será um POST novo!
 
             for (const key in this.fields) {
                 this.fields[key].model = "";
                 this.fields[key].customValue = "";
             }
 
-            // Limpa visualmente o conteúdo do contenteditable
             if (this.$refs.jokeBox) {
                 this.$refs.jokeBox.innerText = "";
             }
@@ -482,7 +579,7 @@ export default {
         },
         async loadChatHistory() {
             try {
-                const res = await fetch("/api/chats");
+                const res = await fetch("/chats");
                 const data = await res.json();
                 this.chatList = data;
             } catch (error) {
@@ -534,8 +631,8 @@ export default {
                 // Etapa 2: Prepara dados do chat
                 const isEditing = !!this.editingChatId;
                 const url = isEditing
-                    ? `/api/chats/${this.editingChatId}`
-                    : "/api/chats";
+                    ? `/chats/${this.editingChatId}`
+                    : "/chats";
                 const method = isEditing ? "PUT" : "POST";
 
                 const chatData = {
@@ -706,7 +803,7 @@ export default {
                     final_prompt: null,
                 };
 
-                await fetch(`/api/chats/${this.editingChatId}`, {
+                await fetch(`/chats/${this.editingChatId}`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Joke;
 use Illuminate\Foundation\Application;
@@ -62,22 +63,22 @@ Route::post('/api/generate-prompt', function (Request $request) {
     $extra = $request->input('extra');
 
     $prompt = <<<EOT
-You are a prompt generator for realistic videos used in Google's Flow system. Every prompt you generate must follow the same structure and be written in English, with dialogue in Portuguese only.
-Use strong Northeast Brazilian tone when needed.
-You are given a fixed joke as the base. Your task is to generate a complete Flow-ready prompt using the joke, adapting the characters, setting, lighting, and style according to the user's inputs.
-NEVER change the joke's core punchline or dialogue, only change how it's presented.
-Always return the prompt in this format:
-# VIDEO STYLE
-# CHARACTERS
-# ENVIRONMENT
-# SCENE DESCRIPTION
-# DIALOGUE (PORTUGUESE ONLY)
+    You are a prompt generator for realistic videos used in Google's Flow system. Every prompt you generate must follow the same structure and be written in English, with dialogue in Portuguese only.
+    Use strong Northeast Brazilian tone when needed.
+    You are given a fixed joke as the base. Your task is to generate a complete Flow-ready prompt using the joke, adapting the characters, setting, lighting, and style according to the user's inputs.
+    NEVER change the joke's core punchline or dialogue, only change how it's presented.
+    Always return the prompt in this format:
+    # VIDEO STYLE
+    # CHARACTERS
+    # ENVIRONMENT
+    # SCENE DESCRIPTION
+    # DIALOGUE (PORTUGUESE ONLY)
 
-Now, generate a Flow prompt for the following joke:
-"{$joke}"
+    Now, generate a Flow prompt for the following joke:
+    "{$joke}"
 
-Apply the following modifications:
-EOT;
+    Apply the following modifications:
+    EOT;
 
     foreach ($request->except('joke', 'extra') as $key => $value) {
         if (!empty($value)) {
@@ -169,7 +170,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/prompt-generator', function () {
         return Inertia::render('PromptGenerator');
     })->name('prompt.generator');
-
+    Route::get('/chats', [ChatHistoryController::class, 'index']);
+    Route::post('/chats', [ChatHistoryController::class, 'store']);
+    Route::put('/chats/{id}', [ChatHistoryController::class, 'update']);
+    Route::post('/corrigir-prompt', [ChatHistoryController::class, 'corrigir']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
