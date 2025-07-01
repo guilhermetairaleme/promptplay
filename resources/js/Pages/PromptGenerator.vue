@@ -1112,7 +1112,7 @@ pre {
     background: #dc3545;
     color: #fff;
     border: none;
-    padding: 6px 14px;
+    padding: 8px 14px;
     border-radius: 8px;
     cursor: pointer;
 }
