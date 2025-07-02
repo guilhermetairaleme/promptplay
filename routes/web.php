@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Middleware\RedirectIfAdmin;
 use App\Models\Joke;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Http;
@@ -166,10 +167,13 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/prompt-generator', function () {
-        return Inertia::render('PromptGenerator');
+Route::middleware(['auth', RedirectIfAdmin::class])->group(function () {
+    Route::get('/prompt-generator/{name?}', function ($name = null) {
+        return Inertia::render('PromptGenerator', ['adminName' => $name]);
     })->name('prompt.generator');
+});
+
+Route::middleware('auth')->group(function () {
     Route::get('/chats', [ChatHistoryController::class, 'index']);
     Route::post('/chats', [ChatHistoryController::class, 'store']);
     Route::put('/chats/{id}', [ChatHistoryController::class, 'update']);

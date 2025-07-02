@@ -2,6 +2,11 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head } from "@inertiajs/vue3";
 import { ref, nextTick } from "vue";
+
+// RECEBE O NOME DO ADMIN COMO PROP
+defineProps({
+    adminName: String,
+});
 </script>
 
 <template>
@@ -12,6 +17,12 @@ import { ref, nextTick } from "vue";
         <div class="app-layout">
             <!-- Sidebar Esquerda -->
             <aside class="sidebar">
+                <!-- 👇 CARD do ADMIN -->
+                <div class="admin-card" v-if="adminName">
+                    <span class="admin-label">Prompt: </span>
+                    <strong class="admin-name">{{ adminName }}</strong>
+                </div>
+
                 <div class="sidebar-header">
                     <span>Histórico</span>
                     <button
@@ -44,8 +55,12 @@ import { ref, nextTick } from "vue";
 
             <!-- Conteúdo Central -->
             <div class="prompt-generator">
-                <h2 class="title">Gerador de Prompt para Vídeos Flow</h2>
-
+                <div class="admin-card-glow" v-if="adminName">
+                    <div class="admin-card-content">
+                        <span class="admin-label">Prompt:</span>
+                        <strong class="admin-name">{{ adminName }}</strong>
+                    </div>
+                </div>
                 <!-- Piada + Extra -->
                 <div class="form-section">
                     <div
@@ -1167,8 +1182,6 @@ pre {
     color: #f1f1f1;
     border-radius: 12px;
     padding: 24px;
-    width: 400px;
-    max-width: 90%;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -1213,4 +1226,67 @@ pre {
     border-radius: 8px;
     cursor: pointer;
 }
+
+.admin-card-glow {
+    display: inline-block; /* <-- ajuste importante */
+    padding: 12px 12px;
+    background-color: #1e1f25;
+    border-radius: 10px;
+    position: relative;
+    text-align: center;
+    overflow: hidden;
+    margin-top: 2rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.admin-card-content {
+    position: relative;
+    z-index: 2;
+    color: #10b981;
+    font-size: 0.95rem;
+    font-weight: bold;
+    white-space: nowrap; /* evita quebra de linha */
+}
+
+.admin-label {
+    color: #ffffff;
+    margin-right: 6px;
+}
+
+.admin-name {
+    color: #FFFFFFFF;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* Neon Animation */
+.admin-card-glow::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(270deg, #22d3ee, #10b981, #9333ea, #22d3ee);
+    background-size: 400% 400%;
+    animation: glowBorder 6s ease infinite;
+    z-index: 1;
+    filter: blur(4px);
+    border-radius: 12px;
+}
+
+@keyframes glowBorder {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
 </style>
