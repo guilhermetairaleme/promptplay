@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\HotmartWebhookController;
+use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\ChatHistoryController;
 use App\Models\Chat;
 use App\Models\ChatHistory;
@@ -7,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/hotmart/webhook', [HotmartWebhookController::class, 'handle']);
 Route::delete('/chat-history/{id}', [ChatHistoryController::class, 'destroy']);
-
+Route::post('/items/import', [ItemController::class, 'import']);
 Route::patch('/chats/{id}/clear-final', function ($id) {
     $chat = ChatHistory::findOrFail($id);
     $chat->final_prompt = null;

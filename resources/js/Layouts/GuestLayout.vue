@@ -27,21 +27,19 @@ onMounted(() => {
         </div>
 
        <!-- Logo e subdomínio agrupados -->
-        <div class="relative z-20 text-center mb-[-60px]">
+        <div class="relative z-20 text-center mb-[-80px]">
         <Link href="/">
             <img
-            src="/imagem/promptplay.png"
+            :src="`/imagem/${subdomain}.promptplay.png`"
             alt="Logo"
             class="mx-auto cinematic-logo"
-            style="width: 300px;"
+            style="width: 400px;"
             />
         </Link>
 
         <!-- Subdomínio -->
-            <div v-if="subdomain" class="mt-2 subdominio">
-            <span
-                class="inline-block px-3 py-1 tracking-wide font-semibold uppercase text-sm"
-            >
+        <div v-if="subdomain" class="mt-4 subdominio">
+            <span class="inline-block px-3 py-1 tracking-wide font-semibold uppercase text-sm">
                 {{ subdomain }}
             </span>
             </div>
