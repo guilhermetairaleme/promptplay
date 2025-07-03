@@ -1,6 +1,6 @@
 @component('mail::message')
 
-<img src="{{ asset('imagem/sapulhapromptplay.png') }}" alt="Logo" style="width: 300px; margin-bottom: 20px;">
+<img src="{{ asset('imagem/sistema.promptplay.png') }}" alt="Logo" style="width: 300px; margin-bottom: 20px;">
 
 # Olá {{ $user->name ?? 'Usuário' }}!
 
