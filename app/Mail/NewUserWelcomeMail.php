@@ -14,11 +14,13 @@ class NewUserWelcomeMail extends Mailable
 
     public $user;
     public $temporaryPassword;
+    public $picture;
 
-    public function __construct($user, $temporaryPassword)
+    public function __construct($user, $temporaryPassword, $picture = "sistema")
     {
         $this->user = $user;
         $this->temporaryPassword = $temporaryPassword;
+        $this->picture = $picture;
     }
 
     public function envelope(): Envelope
@@ -35,6 +37,7 @@ class NewUserWelcomeMail extends Mailable
             with: [
                 'user' => $this->user,
                 'temporaryPassword' => $this->temporaryPassword,
+                'picture' => $this->picture
             ],
         );
     }

@@ -36,4 +36,29 @@ Route::post('/chatgpt', function (Request $request) {
     ]);
 });
 
+Route::post('/criar-personagem', function (Request $request) {
+    $nome = $request->input('nome');
+    $acao = $request->input('acao');
+    $caracteristicas = $request->input('caracteristicas');
 
+    $mensagem = <<<EOT
+Crie uma breve descrição criativa para um personagem fictício com base nas informações abaixo:
+
+- Nome: {$nome}
+- Ação: {$acao}
+- Características: {$caracteristicas}
+
+A descrição deve ser curta (até 3 frases), sem contar uma história completa. Foque apenas em destacar a essência do personagem, de forma divertida e objetiva. Evite introduções, ambientações ou cenas longas.
+EOT;
+
+    $response = Http::withToken(env('OPENAI_API_KEY'))->post('https://api.openai.com/v1/chat/completions', [
+        'model' => 'gpt-4o',
+        'messages' => [
+            ['role' => 'user', 'content' => $mensagem],
+        ],
+    ]);
+
+    return response()->json([
+        'descricao' => $response['choices'][0]['message']['content'] ?? 'Erro ao gerar personagem.'
+    ]);
+});

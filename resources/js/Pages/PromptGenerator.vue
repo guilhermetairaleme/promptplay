@@ -300,12 +300,127 @@ defineProps({
             </div>
         </div>
     </AuthenticatedLayout>
+
+    <!-- Modal Criar Personagem -->
+    <div
+        v-if="showPersonagemModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+    >
+        <div class="bg-white w-full max-w-2xl p-6 rounded shadow-lg relative">
+            <h2 class="text-xl font-bold mb-4">📝 Criar Personagem</h2>
+
+            <!-- Nome -->
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold text-sm"
+                    >Personagem:</label
+                >
+                <input
+                    type="text"
+                    v-model="personagem.nome"
+                    class="w-full p-3 border border-gray-300 rounded"
+                    placeholder="Ex: Yeti, Animal ou um personagem único..."
+                />
+            </div>
+
+            <!-- Ação -->
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold text-sm"
+                    >O que ele está fazendo?</label
+                >
+                <input
+                    type="text"
+                    v-model="personagem.acao"
+                    class="w-full p-3 border border-gray-300 rounded"
+                    placeholder="Ex: Fugindo de um dragão, correndo para as montanhas."
+                />
+            </div>
+
+            <!-- Características (textarea) -->
+            <div class="mb-4">
+                <label class="block mb-1 font-semibold text-sm"
+                    >Características:</label
+                >
+                <textarea
+                    v-model="personagem.caracteristicas"
+                    rows="4"
+                    class="w-full p-3 border border-gray-300 rounded resize-none"
+                    placeholder="Ex: Forte, corajoso, olhos brilhantes, fala engraçada..."
+                ></textarea>
+            </div>
+
+            <!-- Resposta gerada -->
+            <div class="mb-4" v-if="personagem.descricao">
+                <label class="block mb-1 font-semibold text-sm"
+                    >Descrição gerada:</label
+                >
+                <textarea
+                    v-model="personagem.descricao"
+                    rows="5"
+                    readonly
+                    class="w-full p-3 border border-gray-300 rounded bg-gray-100 text-sm"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button
+                    @click="showPersonagemModal = false"
+                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                    Cancelar
+                </button>
+                <button
+                    @click="salvarPersonagem"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                    Gerar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB Canivete -->
+    <div class="fab-container">
+        <transition-group name="fab" tag="div">
+            <button
+                v-if="fabOpen"
+                key="1"
+                class="fab-option"
+                @click="novaAcao('criar-personagem')"
+                title="Criar Personagem"
+            >
+                🛠️ Criar Personagem
+            </button>
+
+            <button
+                v-if="fabOpen"
+                key="3"
+                class="fab-option"
+                @click="novoChat"
+                title="Criar Novo Chat"
+            >
+                📝 Criar Novo Chat
+            </button>
+        </transition-group>
+
+        <button class="fab-main" @click="fabOpen = !fabOpen">
+            <span v-if="!fabOpen">➕</span>
+            <span v-else>✖️</span>
+        </button>
+    </div>
 </template>
 
 <script>
 export default {
     data() {
         return {
+            showCaracteristicasModal: false,
+            showPersonagemModal: false,
+            personagem: {
+                nome: "",
+                acao: "",
+                caracteristicas: "",
+            },
+            fabOpen: false,
             chatList: [],
             toastVisible: false,
             toastMessage: "",
@@ -460,6 +575,46 @@ export default {
         };
     },
     methods: {
+        novaAcao(acao) {
+            this.fabOpen = false;
+
+            if (acao === "criar-personagem") {
+                this.showPersonagemModal = true;
+            }
+
+            if (acao === "criar-chat") {
+                // aqui você coloca a lógica que quiser
+                alert("Criar novo chat clicado!");
+            }
+        },
+        async salvarPersonagem() {
+            try {
+
+                this.loading = true;
+                const response = await fetch("/api/criar-personagem", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document
+                            .querySelector('meta[name="csrf-token"]')
+                            .getAttribute("content"),
+                    },
+                    body: JSON.stringify({
+                        nome: this.personagem.nome,
+                        acao: this.personagem.acao,
+                        caracteristicas: this.personagem.caracteristicas,
+                    }),
+                });
+
+                const data = await response.json();
+                this.personagem.descricao = data.descricao;
+            } catch (error) {
+                console.error("Erro ao gerar personagem:", error);
+                alert("Erro ao gerar personagem.");
+            }finally{
+                  this.loading = false;
+            }
+        },
         showToast(msg) {
             this.toastMessage = msg;
             this.toastVisible = true;
@@ -762,6 +917,21 @@ export default {
             this.loading = true;
             this.prompt = "";
             this.promptFinalizado = "";
+
+             // 🔍 Verifica se personagem foi gerado
+            if (
+                this.personagem?.descricao &&
+                this.personagem?.nome &&
+                this.personagem.descricao.trim() !== ""
+            ) {
+                const usarPersonagem = confirm(
+                    `Deseja usar o personagem "${this.personagem.nome}" na geração do prompt?`
+                );
+
+                if (usarPersonagem) {
+                    this.fields.characters.model = this.personagem.descricao;
+                }
+            }
 
             // Se estiver editando, limpa o final_prompt no backend
             if (this.editingChatId) {
@@ -1255,7 +1425,7 @@ pre {
 }
 
 .admin-name {
-    color: #FFFFFFFF;
+    color: #ffffffff;
     text-transform: uppercase;
     font-weight: bold;
     letter-spacing: 1px;
@@ -1289,4 +1459,85 @@ pre {
     }
 }
 
+.fab-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #1ebfffff;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.fab-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.fab-main {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #10b981;
+    color: white;
+    font-size: 28px;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.fab-main:hover {
+    transform: scale(1.1);
+}
+
+.fab-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 16px;
+    margin-bottom: 10px;
+    border-radius: 24px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.fab-option:hover {
+    background-color: #1e40af;
+}
+
+/* Transição para aparecer/desaparecer suavemente */
+.fab-enter-active,
+.fab-leave-active {
+    transition: all 0.3s ease;
+}
+.fab-enter-from,
+.fab-leave-to {
+    opacity: 0;
+    transform: translateY(10px);
+}
 </style>
