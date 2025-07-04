@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\NewUserWelcomeMail;
+use App\Models\Item;
 
 class HotmartWebhookController extends Controller
 {
@@ -51,8 +52,12 @@ class HotmartWebhookController extends Controller
             ]);
 
           try {
-                Log::alert("enviando...");
-                Mail::to($buyerEmail)->send(new NewUserWelcomeMail($user, $randomPassword));
+                $item = Item::where('external_id',$product['id']);
+                if($item){
+                    $picture = $item->path;
+                }
+                Log::alert("enviando... $picture");
+                Mail::to($buyerEmail)->send(new NewUserWelcomeMail($user, $randomPassword,$picture));
                 Log::info("E-mail enviado para {$buyerEmail}");
             } catch (\Exception $e) {
                 Log::error("Falha ao enviar e-mail para {$buyerEmail}: " . $e->getMessage());
