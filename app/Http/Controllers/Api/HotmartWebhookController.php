@@ -38,7 +38,6 @@ class HotmartWebhookController extends Controller
     $buyerEmail = $buyer['email'] ?? null;
     $buyerName = $buyer['name'] ?? 'Cliente';
 
-
     if ($buyerEmail) {
         $user = User::where('email', $buyerEmail)->first();
 
@@ -52,9 +51,11 @@ class HotmartWebhookController extends Controller
             ]);
 
           try {
-                $item = Item::where('external_id',$product['id']);
+
+                $item = Item::where('external_id', $product['id'])->first();
                 if($item){
                     $picture = $item->path;
+                    Log::alert($picture);
                 }
                 Log::alert("enviando... $picture");
                 Mail::to($buyerEmail)->send(new NewUserWelcomeMail($user, $randomPassword,$picture));
