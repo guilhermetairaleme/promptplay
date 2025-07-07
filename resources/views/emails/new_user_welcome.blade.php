@@ -4,7 +4,6 @@
      alt="Logo"
      style="width: 300px; margin: 40px auto; display: block;">
 
-
 # Olá {{ $user->name ?? 'Usuário' }}!
 
 Sua conta foi criada com sucesso. 🎉
@@ -14,6 +13,10 @@ Sua conta foi criada com sucesso. 🎉
 
 @component('mail::button', ['url' => route('password.request')])
 Redefinir Senha
+@endcomponent
+
+@component('mail::button', ['url' => "$picture.promptplay.com.br"])
+Acessar Site
 @endcomponent
 
 Obrigado,<br>
