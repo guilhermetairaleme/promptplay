@@ -87,13 +87,15 @@ defineProps({
                         style="color: #000; font-size: 0.9rem; margin-top: 4px"
                     ></div>
 
-                    <div
-                        ref="jokeBox"
-                        contenteditable="true"
-                        class="fake-textarea"
-                        :class="{ empty: !selectedJoke }"
-                        @input="selectedJoke = $event.target.innerText"
-                    ></div>
+                    <div class="input-container">
+                        <div
+                            ref="jokeBox"
+                            contenteditable="true"
+                            class="fake-textarea"
+                            @input="onInput"
+                            @paste="handlePaste"
+                        ></div>
+                    </div>
                 </div>
 
                 <!-- Resultado do Prompt -->
@@ -413,6 +415,8 @@ defineProps({
 export default {
     data() {
         return {
+            selectedJoke: "",
+            pastedImageBase64: null, // guardará a imagem se houver
             showCaracteristicasModal: false,
             showPersonagemModal: false,
             personagem: {
@@ -575,6 +579,9 @@ export default {
         };
     },
     methods: {
+        onInput(event) {
+            this.selectedJoke = event.target.innerText;
+        },
         novaAcao(acao) {
             this.fabOpen = false;
 
@@ -587,9 +594,76 @@ export default {
                 alert("Criar novo chat clicado!");
             }
         },
+        handlePaste(event) {
+            const items = event.clipboardData.items;
+
+            for (const item of items) {
+                if (item.type.indexOf("image") === 0) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        const base64 = e.target.result;
+                        this.pastedImageBase64 = base64;
+
+                        // Cria o wrapper da imagem
+                        const wrapper = document.createElement("div");
+                        wrapper.classList.add("image-wrapper");
+
+                        const img = document.createElement("img");
+                        img.src = base64;
+                        img.classList.add("chat-image");
+
+                        const closeBtn = document.createElement("span");
+                        closeBtn.innerText = "✖";
+                        closeBtn.classList.add("remove-btn");
+                        closeBtn.addEventListener("click", () => {
+                            wrapper.remove();
+                            this.pastedImageBase64 = null;
+                        });
+
+                        wrapper.appendChild(closeBtn);
+                        wrapper.appendChild(img);
+
+                        const box = this.$refs.jokeBox;
+
+                        // Insere a imagem no contenteditable
+                        box.appendChild(wrapper);
+
+                        // Verifica se já existe uma safe-line no final
+                        const lastChild = box.lastElementChild;
+                        let safeLine;
+
+                        if (
+                            lastChild &&
+                            lastChild.classList.contains("safe-line")
+                        ) {
+                            safeLine = lastChild;
+                        } else {
+                            // Cria nova safe-line se necessário
+                            safeLine = document.createElement("div");
+                            safeLine.classList.add("safe-line");
+                            safeLine.innerHTML = "<br>";
+                            box.appendChild(safeLine);
+                        }
+
+                        // Move o cursor para dentro do safe-line
+                        const range = document.createRange();
+                        const selection = window.getSelection();
+                        range.selectNodeContents(safeLine);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    };
+
+                    reader.readAsDataURL(file);
+                    event.preventDefault();
+                    break;
+                }
+            }
+        },
         async salvarPersonagem() {
             try {
-
                 this.loading = true;
                 const response = await fetch("/api/criar-personagem", {
                     method: "POST",
@@ -611,8 +685,8 @@ export default {
             } catch (error) {
                 console.error("Erro ao gerar personagem:", error);
                 alert("Erro ao gerar personagem.");
-            }finally{
-                  this.loading = false;
+            } finally {
+                this.loading = false;
             }
         },
         showToast(msg) {
@@ -861,7 +935,6 @@ export default {
         },
         async fetchRandomJoke() {
             this.loading = true;
-
             const baseJoke = this.selectedJoke?.trim();
 
             try {
@@ -874,18 +947,16 @@ export default {
                             .getAttribute("content"),
                     },
                     body: JSON.stringify({
-                        prompt: baseJoke || "", // Envia a piada se existir, senão string vazia
+                        prompt: baseJoke || "",
+                        image: this.pastedImageBase64 || null,
                     }),
                 });
 
                 const data = await res.json();
 
-                // Só substitui se foi gerado automaticamente
                 if (!baseJoke) {
                     this.selectedJoke =
                         data.joke || "Não foi possível gerar uma piada.";
-
-                    // Força a atualização visual do contenteditable
                     this.$nextTick(() => {
                         if (this.$refs.jokeBox) {
                             this.$refs.jokeBox.innerText = this.selectedJoke;
@@ -893,7 +964,6 @@ export default {
                     });
                 }
 
-                // Preenche os campos dinâmicos com base no retorno da API
                 for (const key in this.fields) {
                     if (data[key]) {
                         if (!this.fields[key].options.includes(data[key])) {
@@ -918,7 +988,7 @@ export default {
             this.prompt = "";
             this.promptFinalizado = "";
 
-             // 🔍 Verifica se personagem foi gerado
+            // 🔍 Verifica se personagem foi gerado
             if (
                 this.personagem?.descricao &&
                 this.personagem?.nome &&
@@ -1012,6 +1082,51 @@ export default {
 </script>
 
 <style scoped>
+:deep(.safe-line) {
+  display: block;
+  min-height: 20px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 16px;
+  line-height: 1.4;
+  outline: none;
+}
+
+:deep(.image-wrapper) {
+    display: block;
+    width: 66px;
+    height: 66px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 6px 0 10px;
+    position: relative;
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+}
+
+:deep(.chat-image) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+}
+
+:deep(.remove-btn) {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    background: #ff5c5c;
+    color: white;
+    border-radius: 50%;
+    padding: 3px 5px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .fake-textarea {
     position: relative;
     min-height: 100px;
@@ -1539,5 +1654,19 @@ pre {
 .fab-leave-to {
     opacity: 0;
     transform: translateY(10px);
+}
+
+.image-bubble img {
+    max-width: 180px;
+    max-height: 180px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.image-bubble img:hover {
+    transform: scale(1.05);
 }
 </style>
