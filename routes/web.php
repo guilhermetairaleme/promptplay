@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+set_time_limit(0);
+
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -197,99 +199,145 @@ Route::post('/api/generate-prompt', function (Request $request) {
 
 // COM IMAGEM
 Route::post('/api/generate-joke', function (Request $request) {
-    $baseJoke = $request->input('prompt');
-    $imageBase64 = $request->input('image'); // Base64 com prefixo data:image/jpeg;base64,...
+    $baseContext = $request->input('prompt');           // texto extra opcional
+    $imageBase64 = $request->input('image');            // data:image/jpeg;base64,...
 
-    $messages = [];
+    // ---------- 1. SYSTEM MESSAGE ----------
+    $system = [
+        'role' => 'system',
+        'content' => <<<SYS
+Você é um analista de imagem cinematográfica. Descreva cada pixel que seja significativo:
+• texturas, reflexos, direção da luz, cor de fundo, profundidade de campo;
+• foco, desfoque, granulação, contraste;
+• para cada animal ou pessoa: pelagem/pelo, crina, expressão, músculos, posição das patas, raça (se identificável), utensílios visíveis.
+Nunca invente. Responda somente com JSON válido.
+SYS
+    ];
 
-    // Prompt para quando há imagem
+    // ---------- 2. PROMPTS ----------
     $promptWithImage = <<<EOT
-    You are a scene analyst for cinematic storytelling.
+Analise a imagem como se fosse um _frame_ RAW de cinema.
 
-    Carefully analyze the provided image and generate a highly detailed JSON describing the scene. Be extremely literal and visual in your description.
+**RETORNE UM JSON com estes campos, na ordem exata**:
+1. "video_type"
+2. "clima"
+3. "horario_dia"
+4. "setting"
+5. "narration"
+6. "characters"
+7. "secondary_characters"
+8. "visual_style"
+9. "subject"
+10. "objective"
+11. "dialogue"
 
-    For "characters", list each visible person individually using bullet points:
-    - Include gender, approximate age, visible physical features (hair, skin tone), facial expression, outfit, accessories, and actions.
-    - Do **not** generalize. Be specific and visual like a film director preparing a shot.
+### Como preencher "characters":
+- Liste um bullet **•** por animal ou pessoa visível.
+- Para **animais** inclua, se possível:
+  • `especie` (ex: "cavalo")
+  • `raca` (ex: "Gypsy Vanner") – se não for reconhecível, omita
+  • `pelagem` / `cor`
+  • `textura_do_pelo`
+  • `caracteristicas_fisicas` (crina, músculos, cauda, etc.)
+  • `pose`, `direcao_olhar`, `acao`
+  • `acessorios` (ex: cabeçada, sela)
+  • `caracteristicas_extras` (franjas, cicatrizes, manchas)
 
-    For "scene_description", describe the location, ambiance, decor, and mood in full sentences.
+- Para **pessoas**, inclua:
+  • `sexo` (se visível)
+  • `tom_de_pele` (ex: claro, médio, bronzeado, escuro)
+  • `cor_cabelo` e `tipo_cabelo` (ex: "liso castanho", "ondulado loiro platinado")
+  • `cor_roupa` e tipo de roupa visível (ex: vestido preto com renda, terno azul escuro)
+  • `pose`, `direcao_olhar`, `expressao`, `acao`
+  • `acessorios` (ex: brinco, taça de vinho, relógio)
+  • `caracteristicas_extras` (ex: barba, unhas pintadas, maquiagem, tatuagens)
 
-    Always respond with a JSON containing the following keys:
-    joke, video_type, clima, horario_dia, setting, narration, characters, secondary_characters, visual_style, subject, objective, dialogue.
+- Nunca chute informações: se não for visível, **não inclua** o campo.
 
-    Use informal but respectful Portuguese for dialogue and narration. Do not skip fields. Respond **only** with the JSON, no markdown, no commentary.
-    EOT;
-    // Prompt alternativo para quando não há imagem
+- Para **objetos relevantes** (ex: taças, pratos, alimentos, móveis, adornos), inclua:
+  • `tipo` (ex: "taça de vinho", "prato de salada", "abajur")
+  • `material` (ex: vidro, cerâmica, madeira, tecido)
+  • `cor` (ex: transparente, branco, dourado, verde escuro)
+  • `textura` (ex: lisa, brilhante, rugosa, fosca)
+  • `estado` (ex: limpo, usado, brilhando, molhado)
+  • `interacao` (ex: "sendo segurado pela mulher", "em cima da mesa", "encostado na janela")
+  • `detalhes_visuais` (ex: "bordas douradas", "decoração floral", "reflexos de luz", "com comida servida")
+
+### Regras
+- Descreva texturas, sombras, fundo, luz, reflexos e foco/desfoque.
+- Responda somente com JSON puro (sem Markdown ou comentários).
+EOT;
+
     $promptOnlyText = <<<EOT
-    Gere uma piada estilo Flow com personagens com apelidos no formato NomeReal: conhecido como "Apelido" (ex: Carla: conhecida como "Cacá"). Descreva os personagens com todos os detalhes possíveis, incluindo cor de pele, cabelo, roupas, expressão facial e postura. Descreva também o cenário e a interação. Responda apenas com um JSON contendo: joke, video_type, clima, horario_dia, setting, narration, characters, secondary_characters, visual_style, subject, objective, dialogue. Linguagem informal. Apenas o JSON.
-    EOT;
+Imagine uma cena para vídeo e descreva-a de forma extremamente visual. Retorne JSON contendo:
+video_type, clima, horario_dia, setting, narration, characters, secondary_characters, visual_style, subject, objective, dialogue.
+EOT;
 
-    // Montagem da mensagem com base nos dados disponíveis
+    // ---------- 3. MONTA ARRAY $messages ----------
+    $messages = [$system];
+
     if ($imageBase64) {
-        $text = $promptWithImage;
-
-        if ($baseJoke) {
-            $text .= " Além disso, considere essa fala ou contexto adicional: \"$baseJoke\"";
+        $userText = $promptWithImage;
+        if ($baseContext) {
+            $userText .= " Além disso, considere este contexto: \"$baseContext\"";
         }
 
         $messages[] = [
-            'role' => 'user',
+            'role'    => 'user',
             'content' => [
-                ['type' => 'text', 'text' => $text],
+                ['type' => 'text',      'text' => $userText],
                 ['type' => 'image_url', 'image_url' => ['url' => $imageBase64]]
             ]
         ];
     } else {
-        $text = $promptOnlyText;
-
-        if ($baseJoke) {
-            $text .= "\n\nBase de inspiração: \"$baseJoke\"";
+        $userText = $promptOnlyText;
+        if ($baseContext) {
+            $userText .= "\n\nContexto adicional: \"$baseContext\"";
         }
 
         $messages[] = [
-          ['role' => 'system', 'content' => 'You are an expert visual prompt analyst. Be extremely literal and describe the scene in cinematic detail for video generation.']
+            'role'    => 'user',
+            'content' => $userText
         ];
     }
 
-    // Envio para a API do GPT-4o
-    $response = Http::withToken(env('OPENAI_API_KEY'))->post('https://api.openai.com/v1/chat/completions', [
-        'model' => 'gpt-4o',
-        'messages' => $messages,
-    ]);
+    // ---------- 4. CHAMADA À API ----------
+    $response = Http::withToken(env('OPENAI_API_KEY'))->post(
+        'https://api.openai.com/v1/chat/completions',
+        [
+            'model'           => 'gpt-4o',
+            'messages'        => $messages,
+            'temperature'     => 0.5,     // equilíbrio entre fidelidade e riqueza narrativa
+            'max_tokens'      => 1500,
+            'response_format' => ['type' => 'json_object']
+        ]
+    );
 
-    $fullText = $response['choices'][0]['message']['content'] ?? '';
-    Log::alert("Resposta bruta: $fullText");
+    // ---------- 5. PARSE DA RESPOSTA ----------
+    $jsonText = $response['choices'][0]['message']['content'] ?? '{}';
+    Log::alert("Resposta bruta: $jsonText");
 
-    // Extrai JSON da resposta
-    preg_match('/\{.*\}/s', $fullText, $matches);
-    $jsonText = $matches[0] ?? '{}';
     $data = json_decode($jsonText, true);
-
     if (json_last_error() !== JSON_ERROR_NONE) {
         return response()->json([
-            'error' => 'Erro ao interpretar a resposta como JSON.',
-            'respostaOriginal' => $fullText
+            'error'            => 'Erro ao interpretar a resposta como JSON.',
+            'respostaOriginal' => $jsonText
         ], 500);
     }
 
-    // Normaliza arrays
+    // ---------- 6. NORMALIZAÇÃO OPCIONAL ----------
     foreach ($data as $key => $value) {
         if (is_array($value)) {
-            if (array_keys($value) === range(0, count($value) - 1)) {
-                $isFlat = array_reduce($value, fn($carry, $item) => $carry && (is_scalar($item) || is_null($item)), true);
-                $data[$key] = $isFlat ? implode(', ', $value) : json_encode($value, JSON_UNESCAPED_UNICODE);
-            } else {
-                $data[$key] = json_encode($value, JSON_UNESCAPED_UNICODE);
-            }
+            $isFlat = array_keys($value) === range(0, count($value) - 1) &&
+                      array_reduce($value, fn($c, $i) => $c && (is_scalar($i) || is_null($i)), true);
+            $data[$key] = $isFlat ? implode(', ', $value)
+                                  : json_encode($value, JSON_UNESCAPED_UNICODE);
         }
-    }
-
-    if ($baseJoke) {
-        $data['joke'] = $baseJoke;
     }
 
     return response()->json($data);
 });
+
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

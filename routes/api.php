@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
+
 Route::post('/hotmart/webhook', [HotmartWebhookController::class, 'handle']);
 Route::delete('/chat-history/{id}', [ChatHistoryController::class, 'destroy']);
 Route::post('/items/import', [ItemController::class, 'import']);
