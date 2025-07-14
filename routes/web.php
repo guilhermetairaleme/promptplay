@@ -204,14 +204,20 @@ Route::post('/api/generate-joke', function (Request $request) {
 
     // ---------- 1. SYSTEM MESSAGE ----------
     $system = [
-        'role' => 'system',
+        'role'    => 'system',
+        // 🔄 ALTERADO – reforço de micro-detalhes em roupas/estampas
         'content' => <<<SYS
 Você é um analista de imagem cinematográfica. Descreva cada pixel que seja significativo:
-• texturas, reflexos, direção da luz, cor de fundo, profundidade de campo;
-• foco, desfoque, granulação, contraste;
-• para cada animal ou pessoa: pelagem/pelo, crina, expressão, músculos, posição das patas, raça (se identificável), utensílios visíveis.
-Nunca invente. Responda somente com JSON válido.
+• texturas, reflexos, direção da luz, cor de fundo, profundidade de campo, granulação, contraste, foco/desfoque;
+• para cada pessoa: tom_de_pele, cor/tipo de cabelo, musculatura, braços, coxa, peito, abdomen, caracteristicas_extras;
+• **ROUPA (obrigatório)**: tipo, cor predominante, estilo visual e, se houver, **estampa ou padrão** (diga exatamente qual – floral, geométrico, listrado, poá, etc. – com cores, escala e localização), **dizeres/letras** (texto completo, cor, posição) e **formas gráficas** (caveira, coração, logotipo, emoji, listras laterais, brasão – detalhe cor/posição).
+Nunca invente informações: se não estiver visível, não inclua esse campo. Responda somente com JSON válido e sem comentários.
 SYS
+    ];
+
+    $systemDialogue = [
+        'role'    => 'system',
+        'content' => 'Quando preencher o campo "dialogue", copie literalmente a piada encontrada na imagem (todas as letras, acentos e pontuação). NÃO altere, resuma, nem acrescente nada. Use letras maiúsculas se estiver assim na imagem.'
     ];
 
     // ---------- 2. PROMPTS ----------
@@ -235,7 +241,7 @@ Analise a imagem como se fosse um _frame_ RAW de cinema.
 - Liste um bullet **•** por animal ou pessoa visível.
 - Para **animais** inclua, se possível:
   • `especie` (ex: "cavalo")
-  • `raca` (ex: "Gypsy Vanner") – se não for reconhecível, omita
+  • `raca` (ex: "Gypsy Vanner") - se não for reconhecível, omita
   • `pelagem` / `cor`
   • `textura_do_pelo`
   • `caracteristicas_fisicas` (crina, músculos, cauda, etc.)
@@ -243,13 +249,49 @@ Analise a imagem como se fosse um _frame_ RAW de cinema.
   • `acessorios` (ex: cabeçada, sela)
   • `caracteristicas_extras` (franjas, cicatrizes, manchas)
 
-- Para **pessoas**, inclua:
-  • `sexo` (se visível)
-  • `tom_de_pele` (ex: claro, médio, bronzeado, escuro)
-  • `cor_cabelo` e `tipo_cabelo` (ex: "liso castanho", "ondulado loiro platinado")
-  • `cor_roupa` e tipo de roupa visível (ex: vestido preto com renda, terno azul escuro)
+Para pessoas, inclua:
+• sexo (se visível)
+• tom_de_pele (ex: claro, médio, bronzeado, escuro)
+• cor_cabelo e tipo_cabelo (ex: "liso castanho", "ondulado loiro platinado")
+• roupa - descreva:
+- tipo (ex: vestido, terno, camiseta)
+- cor predominante
+- estilo visual (ex: casual, elegante, formal, esportivo)
+- estampa ou padrão, se houver: descreva com riqueza — ex: "floral com flores grandes em tons de rosa e azul espalhadas por toda a frente da blusa" ou "geométrico com triângulos pretos e cinzas formando listras diagonais"
+- dizeres ou letras visíveis: exemplo "escrita 'NYC' em letras brancas, centralizada na altura do peito"
+- formas gráficas (ex: caveiras, estrelas, corações, faixas, brasões, listras laterais, emojis, logotipos, etc.), incluindo cores e posição
+- **estampa_ou_padrao** detalhada (cores, motivo, localização);
+- **dizeres_ou_letras_visiveis** (texto completo, posição, cor) ou null;
+- **formas_graficas** (caveira, coração, logotipo, faixas, emojis, etc.) ou null.
+Exemplo aprimorado:
+
+“camiseta branca com estampa frontal de caveira vermelha estilizada, centralizada no peito, com escrita ‘REBEL’ em preto logo abaixo; padrão respingado cinza nas mangas”
+
+• pose (ex: sentado, de pé, em movimento)
+• direcao_olhar (ex: para a frente, para a esquerda)
+• expressao (ex: sorrindo, sério, surpreso)
+• acao (ex: caminhando, segurando objeto, abraçando)
+
+• acessorios (ex: brinco, colar, relógio, óculos, chapéu, taça de vinho)
+
+• musculatura (ex: definida, atlética, forte, mediana, pouco definida)
+
+• braços:
+- volume (ex: musculoso, fino, médio)
+- veias_visiveis (true/false)
+- tatuagens (ex: [{ local: "antebraço direito", tipo: "tribal", cor: "preto" }])
+
+• coxa:
+- volume (ex: grossa, média, fina)
+- definicao_muscular (ex: alta, moderada, baixa)
+
+• peito (ex: largo e definido, estreito, atlético)
+• abdomen (ex: tanquinho, liso, barriga saliente)
+• caracteristicas_extras (ex: barba, maquiagem, unhas pintadas, piercings, cicatrizes, tatuagens adicionais)
+
+  Nunca chute informações: se não for visível, **não inclua** o campo.
   • `pose`, `direcao_olhar`, `expressao`, `acao`
-  • `acessorios` (ex: brinco, taça de vinho, relógio)
+  • `acessorios` (ex: brinco, taça de vinho, relógio, colar)
   • `caracteristicas_extras` (ex: barba, unhas pintadas, maquiagem, tatuagens)
 
 - Nunca chute informações: se não for visível, **não inclua** o campo.
@@ -263,6 +305,8 @@ Analise a imagem como se fosse um _frame_ RAW de cinema.
   • `interacao` (ex: "sendo segurado pela mulher", "em cima da mesa", "encostado na janela")
   • `detalhes_visuais` (ex: "bordas douradas", "decoração floral", "reflexos de luz", "com comida servida")
 
+- dialogue deve conter apenas a piada final completa, sem comentários, e sempre em letras maiúsculas, se for uma imagem textual.
+
 ### Regras
 - Descreva texturas, sombras, fundo, luz, reflexos e foco/desfoque.
 - Responda somente com JSON puro (sem Markdown ou comentários).
@@ -274,7 +318,7 @@ video_type, clima, horario_dia, setting, narration, characters, secondary_charac
 EOT;
 
     // ---------- 3. MONTA ARRAY $messages ----------
-    $messages = [$system];
+    $messages = [$system,$systemDialogue];
 
     if ($imageBase64) {
         $userText = $promptWithImage;

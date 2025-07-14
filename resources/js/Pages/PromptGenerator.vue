@@ -206,12 +206,13 @@ defineProps({
                     />
                 </div>
                 <div class="form-section">
-                    <label>Detalhes Extras:</label>
+                    <label>Detalhes Extras / Piada (Dialogue):</label>
                     <textarea
-                        v-model="extraDetails"
+                        v-model="form.dialogue"
                         placeholder="Ex: Incluir reviravolta, usar narração dramática"
                         rows="3"
-                    ></textarea>
+                    >
+                    </textarea>
                 </div>
                 <button
                     @click="generatePrompt"
@@ -426,6 +427,7 @@ export default {
             },
             fabOpen: false,
             chatList: [],
+            dialogue: { model: "", options: [] },
             toastVisible: false,
             toastMessage: "",
             showCorrectionModal: false,
@@ -443,6 +445,21 @@ export default {
             editing: false,
             jokeGenerated: false,
             jokeBox: null,
+            form: {
+                // objeto que o v-model usa
+                dialogue: "", // textarea vai ligar aqui
+                // se quiser, já deixe outros:
+                video_type: "",
+                clima: "",
+                horario: "",
+                setting: "",
+                narration: "",
+                characters: "",
+                secondary: "",
+                visual: "",
+                subject: "",
+                objective: "",
+            },
             fields: {
                 video_type: {
                     label: "Tipo de Vídeo",
@@ -935,9 +952,12 @@ export default {
         },
         async fetchRandomJoke() {
             this.loading = true;
+
+            // ➊ Texto extra que o usuário possa ter digitado no "Detalhes Extras"
             const baseJoke = this.selectedJoke?.trim();
 
             try {
+                /* ---------- chamada ao backend ---------- */
                 const res = await fetch("/api/generate-joke", {
                     method: "POST",
                     headers: {
@@ -952,18 +972,15 @@ export default {
                     }),
                 });
 
-                const data = await res.json();
+                const data = await res.json(); // <- { dialogue: "...", video_type: "...", ... }
 
-                if (!baseJoke) {
-                    this.selectedJoke =
-                        data.joke || "Não foi possível gerar uma piada.";
-                    this.$nextTick(() => {
-                        if (this.$refs.jokeBox) {
-                            this.$refs.jokeBox.innerText = this.selectedJoke;
-                        }
-                    });
-                }
+                /* ---------- 1.  atualiza a piada ---------- */
+                // sempre use o dialogue que veio do backend
+                this.selectedJoke =
+                    data.dialogue || "Não foi possível gerar a piada.";
 
+
+                /* ---------- 2.  popular selects/inputs ---------- */
                 for (const key in this.fields) {
                     if (data[key]) {
                         if (!this.fields[key].options.includes(data[key])) {
@@ -973,6 +990,15 @@ export default {
                     }
                 }
 
+                /* ---------- 3.  garante que dialogue fique no textarea com v-model ---------- */
+                if (this.fields.dialogue) {
+                    this.fields.dialogue.model = this.selectedJoke;
+                } else {
+                    // se dialogue não estiver em this.fields, mas você usa form.dialogue:
+                    this.form.dialogue = this.selectedJoke;
+                }
+
+                /* ---------- 4.  campo extra se existir ---------- */
                 if (data.extra) this.extraDetails = data.extra;
 
                 this.jokeGenerated = true;
@@ -1083,13 +1109,13 @@ export default {
 
 <style scoped>
 :deep(.safe-line) {
-  display: block;
-  min-height: 20px;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  font-size: 16px;
-  line-height: 1.4;
-  outline: none;
+    display: block;
+    min-height: 20px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 16px;
+    line-height: 1.4;
+    outline: none;
 }
 
 :deep(.image-wrapper) {
