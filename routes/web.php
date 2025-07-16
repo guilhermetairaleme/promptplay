@@ -253,17 +253,26 @@ Para pessoas, inclua:
 • sexo (se visível)
 • tom_de_pele (ex: claro, médio, bronzeado, escuro)
 • cor_cabelo e tipo_cabelo (ex: "liso castanho", "ondulado loiro platinado")
+
 • roupa - descreva:
-- tipo (ex: vestido, terno, camiseta)
-- cor predominante
-- estilo visual (ex: casual, elegante, formal, esportivo)
-- estampa ou padrão, se houver: descreva com riqueza — ex: "floral com flores grandes em tons de rosa e azul espalhadas por toda a frente da blusa" ou "geométrico com triângulos pretos e cinzas formando listras diagonais"
-- dizeres ou letras visíveis: exemplo "escrita 'NYC' em letras brancas, centralizada na altura do peito"
-- formas gráficas (ex: caveiras, estrelas, corações, faixas, brasões, listras laterais, emojis, logotipos, etc.), incluindo cores e posição
-- **estampa_ou_padrao** detalhada (cores, motivo, localização);
-- **dizeres_ou_letras_visiveis** (texto completo, posição, cor) ou null;
-- **formas_graficas** (caveira, coração, logotipo, faixas, emojis, etc.) ou null.
-Exemplo aprimorado:
+  - **tipo** (ex: vestido, terno, camiseta)
+  - **modelo / cobertura** (ex: tomara-que-caia, regata, manga longa, cropped, gola alta, ombro só, cobrindo todo o braço, acima do joelho)
+  - **cor predominante**
+  - **estilo visual** (ex: casual, elegante, formal, esportivo)
+  - **estampa ou padrão**, se houver: descreva com riqueza — ex.:
+    “floral com flores grandes em tons de rosa e azul espalhadas por toda a frente da blusa”,
+    “geométrico com triângulos pretos e cinzas formando listras diagonais”,
+    “listras horizontais finas em preto e branco”, etc.
+  - **dizeres ou letras visíveis**: exemplo “escrita ‘NYC’ em letras brancas, centralizada na altura do peito”
+  - **formas gráficas** (caveiras, estrelas, corações, faixas, brasões, listras laterais, emojis, logotipos), incluindo cores e posição
+  - **estampa_ou_padrao** detalhada (cores, motivo, localização)
+  - **dizeres_ou_letras_visiveis** (texto completo, posição, cor) ou `null`
+  - **formas_graficas** (caveira, coração, logotipo, faixas, emojis, etc.) ou `null`
+  - **Flor**:
+    • Sempre que houver flores visíveis, identifique:
+    - `nome_da_flor` (ex: "girassol", "rosa", "tulipa")
+    - `cor_da_flor` (ex: amarelo, vermelho escuro, branco com bordas rosa)
+    • Se não houver flores, use `null`
 
 “camiseta branca com estampa frontal de caveira vermelha estilizada, centralizada no peito, com escrita ‘REBEL’ em preto logo abaixo; padrão respingado cinza nas mangas”
 
@@ -274,7 +283,7 @@ Exemplo aprimorado:
 
 • acessorios (ex: brinco, colar, relógio, óculos, chapéu, taça de vinho)
 
-• musculatura (ex: definida, atlética, forte, mediana, pouco definida)
+• musculatura (ex: definida, atlética, forte, mediana, pouco definida, magra)
 
 • braços:
 - volume (ex: musculoso, fino, médio)
@@ -296,6 +305,11 @@ Exemplo aprimorado:
 
 - Nunca chute informações: se não for visível, **não inclua** o campo.
 
+• Para flores seguradas por alguém:
+  - indique `tipo: "flor"`
+  - `nome_da_flor` e `cor_da_flor` obrigatórios
+  - descreva `interacao` (ex: "segurada pela mulher")
+
 - Para **objetos relevantes** (ex: taças, pratos, alimentos, móveis, adornos), inclua:
   • `tipo` (ex: "taça de vinho", "prato de salada", "abajur")
   • `material` (ex: vidro, cerâmica, madeira, tecido)
@@ -303,11 +317,13 @@ Exemplo aprimorado:
   • `textura` (ex: lisa, brilhante, rugosa, fosca)
   • `estado` (ex: limpo, usado, brilhando, molhado)
   • `interacao` (ex: "sendo segurado pela mulher", "em cima da mesa", "encostado na janela")
-  • `detalhes_visuais` (ex: "bordas douradas", "decoração floral", "reflexos de luz", "com comida servida")
+  • `detalhes_visuais` (ex: "bordas douradas", "decoração floral", "reflexos de luz", "com comida servida,flor, tipo de flor, nome da flor")
 
 - dialogue deve conter apenas a piada final completa, sem comentários, e sempre em letras maiúsculas, se for uma imagem textual.
 
 ### Regras
+- Se for uma imagem somente com texto (ex: piada, pergunta, frase motivacional), retorne **somente os 11 campos descritivos em formato texto**, como se estivesse preenchendo um relatório.
+- Nunca chute: se a flor não estiver claramente visível, use `null`.
 - Descreva texturas, sombras, fundo, luz, reflexos e foco/desfoque.
 - Responda somente com JSON puro (sem Markdown ou comentários).
 EOT;
